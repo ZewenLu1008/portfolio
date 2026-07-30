@@ -39,7 +39,8 @@ if not os.getenv("OPENAI_API_KEY"):
     print("  export OPENAI_API_KEY=sk-your-key-here")
     print("="*60 + "\n")
 
-from src.utils.data_loader import load_and_profile_data, print_data_summary
+from src.utils.data_loader import print_data_summary
+from src.utils.data_ingestion import load_and_merge_data, create_directory_if_not_exists
 from src.core.state import StateFactory
 from src.core.graph import app, visualize_graph
 
@@ -169,27 +170,56 @@ def main():
     os.makedirs("outputs/plots", exist_ok=True)
     print("[OK] Output directories created")
 
-    # 3. Load data
-    input_file = "data/dirty_data.csv"
+    # 3. Load data from multiple sources (CSV, Excel, PDF)
+    input_directory = "data/raw"
     output_file = "outputs/cleaned_data.csv"
 
-    print(f"[INFO] Loading data: {input_file}")
+    print(f"\n[INFO] Loading data from directory: {input_directory}")
+    print("[INFO] Scanning for CSV, Excel, and PDF files...")
 
     try:
-        original_df_info = load_and_profile_data(input_file)
+        # Create input directory if it doesn't exist
+        create_directory_if_not_exists(input_directory)
+
+        # Load and merge heterogeneous data sources
+        merged_df, ingestion_metadata = load_and_merge_data(input_directory)
+
+        # Generate profile information for the merged dataframe
+        from src.utils.data_loader import extract_df_info
+        original_df_info = extract_df_info(merged_df)
+
+        # Add ingestion metadata to df_info
+        original_df_info["ingestion_metadata"] = ingestion_metadata
+
     except Exception as e:
         print(f"\n[ERROR] Data loading failed: {str(e)}")
         print("\nPlease generate test data first:")
+        print("  python scripts/generate_heterogeneous_data.py")
+        print("\nOr use legacy single-file mode:")
         print("  python scripts/generate_dirty_data.py")
         return
 
     # Print data summary
+    print("\n" + "="*60)
+    print("Data Summary (Merged from Multiple Sources)")
+    print("="*60)
     print_data_summary(original_df_info)
+
+    # Print ingestion metadata
+    if "ingestion_metadata" in original_df_info:
+        meta = original_df_info["ingestion_metadata"]
+        print(f"\n[Ingestion Metadata]")
+        print(f"  Total files processed: {meta['total_files_processed']}")
+        print(f"  Sources: {len(meta['source_files'])} data sources")
+        if meta['warnings']:
+            print(f"  Warnings: {len(meta['warnings'])}")
+            for warning in meta['warnings']:
+                print(f"    - {warning}")
 
     # 3. Initialize state
     print("\n[INFO] Initializing Agent state...")
     initial_state = StateFactory.create_initial_state(
-        input_file_path=input_file,
+        input_file_path=input_directory,  # Now points to directory, not single file
         output_file_path=output_file
     )
     initial_state["original_df_info"] = original_df_info

@@ -4,7 +4,8 @@ An intelligent data cleaning and quality assurance agent built with LangGraph. A
 
 ## Features
 
-- **Automatic Data Quality Diagnosis**: Intelligently analyzes CSV data quality issues
+- **Multi-Source Data Ingestion**: Automatically processes CSV, Excel, and PDF files from a single directory
+- **Automatic Data Quality Diagnosis**: Intelligently analyzes data quality issues with awareness of multi-source artifacts
 - **Code Auto-Generation**: Generates Pandas cleaning code based on diagnostic results
 - **Self-Correction Mechanism**: Automatically retries on execution failure (up to 3 attempts)
 - **Quality Assurance**: Automated QA validation after data cleaning
