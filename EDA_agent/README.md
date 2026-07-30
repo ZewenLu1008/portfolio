@@ -202,6 +202,38 @@ After execution, check these files:
   - EDA business insights
 - `outputs/plots/*.png` - Generated visualizations
 
+## Testing
+
+A comprehensive unit test suite with 36 tests is included to ensure code quality and reliability.
+
+### Run Tests
+
+```bash
+# Install test dependencies
+uv pip install pytest pytest-mock pytest-cov
+
+# Run all tests
+python -m pytest tests/ -v
+
+# Run with coverage report
+python -m pytest tests/ --cov=src --cov-report=html
+```
+
+### Test Coverage
+
+- **State Initialization** (5 tests): Validates AgentState creation and default values
+- **Graph Routing Logic** (9 tests): Tests conditional routing and self-correction paths
+- **Executor Sandbox** (11 tests): Tests safe code execution and error handling
+- **QA Deterministic Rules** (11 tests): Validates quality assurance thresholds
+
+All tests use mocked LLM calls to ensure instant execution without consuming API credits.
+
+**Test-Driven Bug Fixes**: During test development, 2 out of 36 tests initially failed, revealing actual bugs:
+1. **Syntax Error Test Fix**: The test case's "bad code" didn't contain an actual syntax error (a comment is valid Python). Fixed by adding a real syntax error (missing closing parenthesis).
+2. **None Handling Bug in `route_after_qa`**: Discovered that `state.get("qa_result", {})` returns `None` (not `{}`) when the key exists with a `None` value. Fixed the source code in `src/core/graph.py` by changing to `state.get("qa_result") or {}` to properly handle `None` cases.
+
+See [tests/TESTING.md](tests/TESTING.md) for detailed testing documentation.
+
 ## Development Roadmap
 
 - [x] Project structure setup
@@ -215,8 +247,8 @@ After execution, check these files:
 - [x] LangGraph workflow construction
 - [x] Self-correction mechanism
 - [x] English-only enforcement
+- [x] Unit tests (36 tests, 100% passing)
 - [ ] Logging and monitoring
-- [ ] Unit tests
 - [ ] Additional EDA node enhancements
 
 ## Configuration

@@ -62,7 +62,7 @@ def route_after_qa(state: DataCleaningState) -> Literal["eda", "end"]:
     Returns:
         Name of the next node
     """
-    qa_result = state.get("qa_result", {})
+    qa_result = state.get("qa_result") or {}
     passed = qa_result.get("passed", False)
 
     if passed:
