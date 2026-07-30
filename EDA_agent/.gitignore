@@ -56,3 +56,6 @@ htmlcov/
 # Environment
 .env
 .env.local
+
+# Project status tracking (local only)
+CURRENT_STATUS.md
