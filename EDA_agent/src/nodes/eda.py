@@ -101,7 +101,7 @@ def eda_node(state: DataCleaningState) -> Dict[str, Any]:
         }
 
     # 6. Execute code to generate charts
-    output_dir = "outputs/plots"
+    output_dir = "outputs/charts"
     os.makedirs(output_dir, exist_ok=True)
 
     execution_error = _execute_plot_code(
@@ -165,12 +165,19 @@ CRITICAL LANGUAGE REQUIREMENT: You MUST output your response ENTIRELY in English
 ```
 
 **Requirements:**
-1. Generate Python code that creates exactly 3 informative plots:
-   - Plot 1: Distribution plot for numeric columns (histogram/density)
-   - Plot 2: Bar chart for categorical columns (top categories)
-   - Plot 3: Correlation heatmap for numeric columns
+1. Generate Python code that creates 3-4 informative plots:
+   - Distribution plot for numeric columns (histogram/density)
+   - Bar chart for categorical columns (top categories)
+   - Time series plot if date columns exist
+   - Correlation heatmap for numeric columns (if 2+ numeric cols exist)
 
-2. CRITICAL CODE CONSTRAINTS - STRICTLY ENFORCE:
+2. **CRITICAL PLOTTING RULE (MANDATORY):**
+   - You MUST save all plots to disk using `plt.savefig('outputs/charts/plot_name.png', bbox_inches='tight')`
+   - You MUST NOT use `plt.show()` - this is a headless environment, plots will not display
+   - After each plot, you MUST call `plt.close()` or `plt.clf()` to clear the figure and prevent memory leaks
+   - Each plot file should have a descriptive name (e.g., `distribution_price.png`, `sales_by_category.png`, `sales_over_time.png`)
+
+3. CRITICAL CODE CONSTRAINTS - STRICTLY ENFORCE:
    - The code MUST be 100% in English (no Chinese characters, no Emoji symbols)
    - All function names, variable names, comments, plot titles, axis labels, and legends MUST be in English only
    - Use only ASCII characters to avoid matplotlib font rendering issues
@@ -188,14 +195,23 @@ CRITICAL LANGUAGE REQUIREMENT: You MUST output your response ENTIRELY in English
    - This ensures that NO Chinese characters will appear in matplotlib/seaborn plots, preventing font rendering errors
    - The translated column names and values should be meaningful English words that reflect the data semantics
 
-4. **MANDATORY INSIGHTS LANGUAGE REQUIREMENT (100% ENGLISH ONLY):**
-   - The business insights section MUST be written in 100% English
-   - NO Chinese characters are allowed in the <INSIGHTS> section
-   - Write in clear, professional English suitable for business reports
-   - Provide business insights in Markdown format explaining:
-     * What patterns each plot reveals
-     * Key business insights from the data
-     * Recommendations based on the analysis
+4. **MANDATORY STRUCTURED JSON OUTPUT FORMAT:**
+   - After the code section, you MUST provide insights in STRICT JSON format (NOT Markdown)
+   - The JSON schema MUST be:
+   {{{{
+     "summary": "High-level overview of the entire dataset in 2-3 sentences...",
+     "plots": [
+       {{{{
+         "filename": "exact_plot_filename.png",
+         "interpretation": "Detailed analysis of this specific plot, what patterns it reveals, and business insights..."
+       }}}}
+     ]
+   }}}}
+   - The "filename" MUST exactly match the saved PNG file name from your code
+   - Each plot in your code MUST have a corresponding entry in the "plots" array
+   - The "interpretation" should be 3-5 sentences explaining that specific plot's insights
+   - The JSON MUST be valid and parseable (properly escaped quotes, no trailing commas)
+   - MUST be 100% in English, NO Chinese characters allowed
 
 **Output Format:**
 Your response MUST be structured as follows:
@@ -204,11 +220,23 @@ Your response MUST be structured as follows:
 [Put the complete Python code here - 100% English only, all comments in English]
 </CODE>
 
-<INSIGHTS>
-[Put the Markdown insights here - MUST be 100% in English, NO Chinese characters allowed]
-</INSIGHTS>
+<JSON>
+{{{{
+  "summary": "High-level dataset overview...",
+  "plots": [
+    {{{{
+      "filename": "distribution_price.png",
+      "interpretation": "The price distribution shows..."
+    }}}},
+    {{{{
+      "filename": "sales_by_category.png",
+      "interpretation": "Category analysis reveals..."
+    }}}}
+  ]
+}}}}
+</JSON>
 
-FINAL REMINDER: Your ENTIRE response (code comments, insights, everything) MUST be in English. No Chinese characters anywhere.
+FINAL REMINDER: Your ENTIRE response (code comments, JSON content, everything) MUST be in English. No Chinese characters anywhere. The JSON must be valid and parseable.
 
 **Example Code Structure:**
 ```python
@@ -226,7 +254,7 @@ def generate_plots(df, output_dir):
     if len(numeric_cols) > 0:
         fig, axes = plt.subplots(1, min(3, len(numeric_cols)), figsize=(15, 4))
         # ... plot code ...
-        plt.savefig(f"{{output_dir}}/plot_1_numeric_distribution.png")
+        plt.savefig(f"{{output_dir}}/distribution_numeric.png", bbox_inches='tight')
         plt.close()
 
     # Plot 2: Categorical bar chart
@@ -236,25 +264,31 @@ def generate_plots(df, output_dir):
     # ... similar structure ...
 ```
 
-Now generate the EDA code and insights for the given dataset.
+Now generate the EDA code and structured JSON insights for the given dataset.
 """
 
     return prompt
 
 
-def _parse_llm_output(llm_output: str) -> tuple[str, str]:
+def _parse_llm_output(llm_output: str) -> tuple[str, dict]:
     """
-    Parse LLM output, extract code and insights
+    Parse LLM output, extract code and structured insights JSON
 
     Args:
         llm_output: LLM's raw output
 
     Returns:
-        (code, insights) tuple
+        (code, insights_dict) tuple where insights_dict has schema:
+        {
+            "summary": str,
+            "plots": [{"filename": str, "interpretation": str}, ...]
+        }
 
     Raises:
         ValueError: If parsing fails
     """
+    import json
+
     # Extract <CODE> tag content
     code_match = re.search(r'<CODE>\s*(.*?)\s*</CODE>', llm_output, re.DOTALL)
     if not code_match:
@@ -266,14 +300,34 @@ def _parse_llm_output(llm_output: str) -> tuple[str, str]:
     code = re.sub(r'^```python\s*', '', code)
     code = re.sub(r'```\s*$', '', code)
 
-    # Extract <INSIGHTS> tag content
-    insights_match = re.search(r'<INSIGHTS>\s*(.*?)\s*</INSIGHTS>', llm_output, re.DOTALL)
-    if not insights_match:
-        raise ValueError("Cannot find <INSIGHTS> tag in LLM output")
+    # Extract <JSON> tag content
+    json_match = re.search(r'<JSON>\s*(.*?)\s*</JSON>', llm_output, re.DOTALL)
+    if not json_match:
+        raise ValueError("Cannot find <JSON> tag in LLM output")
 
-    insights = insights_match.group(1).strip()
+    json_str = json_match.group(1).strip()
 
-    return code, insights
+    # Clean markdown formatting if present (strip ```json and ```)
+    json_str = re.sub(r'^```json\s*', '', json_str)
+    json_str = re.sub(r'^```\s*', '', json_str)
+    json_str = re.sub(r'```\s*$', '', json_str)
+    json_str = json_str.strip()
+
+    # Parse JSON
+    try:
+        insights_dict = json.loads(json_str)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Failed to parse JSON insights: {str(e)}\nJSON content: {json_str[:200]}...")
+
+    # Validate schema
+    if not isinstance(insights_dict, dict):
+        raise ValueError("Insights JSON must be a dictionary")
+    if "summary" not in insights_dict:
+        raise ValueError("Insights JSON missing 'summary' field")
+    if "plots" not in insights_dict or not isinstance(insights_dict["plots"], list):
+        raise ValueError("Insights JSON missing 'plots' array field")
+
+    return code, insights_dict
 
 
 def _execute_plot_code(code: str, input_file: str, output_dir: str) -> str | None:

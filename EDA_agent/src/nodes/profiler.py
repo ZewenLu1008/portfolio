@@ -46,6 +46,15 @@ SPECIAL CONSIDERATIONS FOR MULTI-SOURCE DATA:
 - **Inconsistent Column Names**: Different sources may have used variations like "customer_id" vs "CustomerID" vs "cust_id" - these should be standardized.
 - **Data Type Confusion**: PDF extraction often produces string columns that should be numeric. Detect and convert these carefully.
 
+CRITICAL DATA CLEANING RULES (MANDATORY):
+1. **String Pre-processing Before Numeric Coercion**: BEFORE converting monetary or numeric columns to float/int, you MUST instruct the Coder to strip ALL currency symbols (e.g., $, €, £), commas, and spaces using `.str.replace(r'[^\d.-]', '', regex=True)`. NEVER apply `pd.to_numeric(..., errors='coerce')` directly on columns that may contain currency symbols, as this will coerce valid values to NaNs.
+
+2. **Robust Datetime Parsing for Mixed Formats**: When parsing dates from multiple sources, assume mixed formats (e.g., YYYY-MM-DD from CSV, DD/MM/YYYY from Excel). Use `pd.to_datetime(col, errors='coerce', dayfirst=False)` and handle format variations explicitly. Consider trying multiple format strings if needed. NEVER allow valid dates to become NaT due to format assumptions.
+
+3. **Strict Row Retention Policy**: DO NOT drop rows unless explicitly required by business logic. Missing prices should be imputed with the median or mean. Missing dates can be left as NaT but the row MUST be kept. Only drop duplicates when the ENTIRE row is an exact match (use `drop_duplicates()` without subset parameter, or specify key columns carefully). Target >90% row retention after cleaning.
+
+4. **Clean Schema Output**: DO NOT add diagnostic columns like `_is_outlier`, `_invalid_date`, `_source_file`, or any temporary flags to the final cleaned DataFrame. The output schema should match the input schema (after translation and standardization). All temporary columns used for validation must be dropped before returning the cleaned data.
+
 Output requirements:
 - Use clear Markdown format
 - Write ENTIRELY in English (no Chinese characters allowed)

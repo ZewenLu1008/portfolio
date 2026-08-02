@@ -66,6 +66,54 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
 - **CRITICAL**: Do NOT use the deprecated 'infer_datetime_format' parameter with pd.to_datetime() - it is deprecated in newer Pandas versions
 - When the cleaning strategy mentions translating Chinese column names, this MUST be the VERY FIRST operation in your code
 
+MANDATORY DATA CLEANING RULES (CRITICAL):
+1. **CRITICAL RULE FOR NUMERIC CLEANING (Mixed-Type Columns)**:
+   - Columns merged from different files (CSV, Excel) often contain MIXED TYPES: some rows are floats, others are strings with '$', '€', commas, etc.
+   - If you apply `.str.replace()` directly, it will FAIL on float rows and turn valid numbers into NaNs, causing data loss.
+   - You MUST cast to string BEFORE regex replacement, then convert to numeric, then impute. Use exactly this pattern:
+
+   ```python
+   df['col'] = df['col'].astype(str).str.replace(r'[^\d.]', '', regex=True)
+   df['col'] = pd.to_numeric(df['col'], errors='coerce')
+   df['col'] = df['col'].fillna(df['col'].median())
+   ```
+
+   - This three-step pattern is MANDATORY for all numeric columns (price, quantity, revenue, etc.).
+   - NEVER skip the `.astype(str)` step - it prevents the mixed-type failure mode.
+   - NEVER apply pd.to_numeric() directly on columns that may contain currency symbols or formatting.
+
+2. **CRITICAL RULE FOR DATE PARSING (Mixed-Format Datetime)**:
+   - When converting string columns to datetime (like order_date, transaction_date), you MUST handle mixed formats from different data sources.
+   - Different files may contain different formats: CSV uses YYYY-MM-DD, Excel uses DD/MM/YYYY, PDF may use MM-DD-YYYY.
+   - You MUST use this exact syntax for robust mixed-format parsing:
+
+   ```python
+   df['col'] = pd.to_datetime(df['col'], format='mixed', dayfirst=True, errors='coerce')
+   ```
+
+   - The `format='mixed'` parameter tells pandas to infer each date individually rather than assuming one format.
+   - The `dayfirst=True` parameter prioritizes DD/MM/YYYY interpretation when ambiguous (08/04/2024 → April 8th, not August 4th).
+   - NEVER use a single fixed format string or dayfirst=False - this will fail on heterogeneous datasets.
+   - After parsing, NaT values should be minimal (< 5% of rows). If you see many NaT values, the parsing strategy is wrong.
+
+3. **Strict Row Retention Policy**:
+   - DO NOT drop rows unless explicitly required by the cleaning strategy.
+   - For missing numeric values (e.g., price, quantity): impute with median using `df['col'].fillna(df['col'].median())`
+   - For missing categorical values: consider mode imputation or leave as-is if acceptable.
+   - For missing dates: leave as NaT but keep the row.
+   - For duplicates: ONLY use `drop_duplicates()` if the entire row is an exact match. Do NOT drop based on a single column unless explicitly instructed.
+   - Target: Retain >90% of input rows after cleaning.
+
+4. **Clean Schema Output**:
+   - DO NOT add diagnostic columns like `_is_outlier`, `_invalid_date`, `_source_file`, or temporary flags.
+   - If you create temporary columns for intermediate processing, DROP them before returning: `df = df.drop(columns=['_temp_col'])`
+   - The returned DataFrame should contain ONLY the cleaned versions of the original columns (after translation/standardization).
+
+5. **String Cleaning for Categorical Columns**:
+   - Always strip leading/trailing whitespace: `df['category'] = df['category'].str.strip()`
+   - Standardize casing if needed: `df['category'] = df['category'].str.title()` or `.str.lower()`
+   - Remove extra internal spaces: `df['category'] = df['category'].str.replace(r'\s+', ' ', regex=True)`
+
 REMINDER: Output MUST be 100% in English. No Chinese characters allowed in comments, strings, or any part of the code.
 """
 

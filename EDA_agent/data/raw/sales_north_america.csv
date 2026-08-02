@@ -1,0 +1,51 @@
+order_id,order_date,customer_name,category,price
+NA1000,2024-01-01,James Martinez,Home & Garden,71.71
+NA1001,2024-01-03,Sarah Davis,Electronics,232.55
+NA1002,2024-01-05,Jennifer Rodriguez,Sports,406.59
+NA1003,2024-01-07,David Wilson,Clothing,404.89
+NA1004,2024-01-09,James Martinez,Sports,361.31
+NA1003,2024-01-11,Linda Taylor,Clothing,176.43
+NA1006,2024-01-13,Michael Brown,Clothing,343.76
+NA1007,2024-01-15,James Martinez,Sports,239.62
+NA1008,2024-01-17,Jennifer Rodriguez,Books,
+NA1009,2024-01-19,David Wilson,Clothing,511.76
+NA1010,2024-01-21,Sarah Davis,Clothing,437.48
+NA1011,2024-01-23,Jennifer Rodriguez,Sports,153.81
+NA1012,2024-01-25,Jennifer Rodriguez,Clothing,165.53
+NA1013,2024-01-27,Michael Brown,Clothing,39.6
+NA1014,2024-01-29,Jessica Garcia,Sports,431.02
+NA1010,2024-01-31,David Wilson,Sports,80.75
+NA1016,2024-02-02,Emily Johnson,Electronics,272.56
+NA1017,2024-02-04,Jennifer Rodriguez,Books,133.79
+NA1018,2024-02-06,Jessica Garcia,Books,
+NA1019,2024-02-08,Emily Johnson,Clothing,293.61
+NA1020,2024-02-10,David Wilson,Books,344.94
+NA1021,2024-02-12,John Smith,Clothing,422.17
+NA1022,2024-02-14,Linda Taylor,Electronics,97.36
+NA1023,2024-02-16,Jessica Garcia,Sports,368.97
+NA1024,2024-02-18,Robert Lee,Sports,331.26
+NA1020,2024-02-20,John Smith,Sports,134.58
+NA1026,2024-02-22,Linda Taylor,Books,566.62
+NA1027,2024-02-24,Michael Brown,Electronics,365.73
+NA1028,2024-02-26,James Martinez,Books,421.74
+NA1029,2024-02-28,Sarah Davis,Books,530.18
+NA1030,2024-03-01,Robert Lee,Electronics,380.61
+NA1031,2024-03-03,Michael Brown,Electronics,188.64
+NA1032,2024-03-05,David Wilson,Electronics,77.6
+NA1033,2024-03-07,Michael Brown,Electronics,282.61
+NA1034,2024-03-09,James Martinez,Sports,143.56
+NA1035,2024-03-11,David Wilson,Home & Garden,
+NA1036,2024-03-13,Robert Lee,Home & Garden,531.83
+NA1037,2024-03-15,James Martinez,Electronics,205.41
+NA1038,2024-03-17,Emily Johnson,Home & Garden,87.29
+NA1039,2024-03-19,Sarah Davis,Home & Garden,224.07
+NA1040,2024-03-21,Robert Lee,Electronics,545.58
+NA1041,2024-03-23,Emily Johnson,Home & Garden,174.92
+NA1042,2024-03-25,Linda Taylor,Books,394.24
+NA1043,2024-03-27,Robert Lee,Clothing,16.29
+NA1044,2024-03-29,Linda Taylor,Clothing,221.89
+NA1045,2024-03-31,David Wilson,Electronics,193.98
+NA1046,2024-04-02,Emily Johnson,Sports,112.15
+NA1047,2024-04-04,Sarah Davis,Electronics,327.9
+NA1048,2024-04-06,James Martinez,Sports,299.13
+NA1049,2024-04-08,Jennifer Rodriguez,Clothing,420.37

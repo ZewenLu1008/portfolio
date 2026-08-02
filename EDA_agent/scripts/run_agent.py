@@ -160,18 +160,45 @@ def print_final_report(final_state: dict):
         print(f"\n[WARNING] Report save failed: {str(e)}")
 
 
-def main():
-    """Main function"""
+def main(raw_data_dir="data/raw"):
+    """
+    Main function - Acts as API for Streamlit frontend
+
+    Args:
+        raw_data_dir: Directory containing raw data files (default: "data/raw")
+
+    Returns:
+        dict: Structured results with keys expected by Streamlit app:
+            - orig_rows: Original row count
+            - cleaned_rows: Cleaned row count
+            - orig_nulls: Original null count
+            - cleaned_nulls: Cleaned null count
+            - qa_status: QA status ("PASSED" or "FAILED")
+            - qa_report: LLM assessment report text
+            - eda_report: Final EDA markdown text
+            - cleaned_df: Final cleaned DataFrame
+    """
     # 1. Print startup banner
     print_banner()
 
     # 2. Ensure output directories exist
     os.makedirs("outputs", exist_ok=True)
-    os.makedirs("outputs/plots", exist_ok=True)
+    os.makedirs("outputs/charts", exist_ok=True)
     print("[OK] Output directories created")
 
+    # Clear old charts from previous runs to avoid stale visualizations
+    charts_dir = "outputs/charts"
+    if os.path.exists(charts_dir):
+        for file in os.listdir(charts_dir):
+            if file.endswith(('.png', '.jpg', '.jpeg')):
+                try:
+                    os.remove(os.path.join(charts_dir, file))
+                except Exception as e:
+                    print(f"[WARNING] Could not remove old chart {file}: {e}")
+        print("[OK] Cleared old charts from previous runs")
+
     # 3. Load data from multiple sources (CSV, Excel, PDF)
-    input_directory = "data/raw"
+    input_directory = raw_data_dir
     output_file = "outputs/cleaned_data.csv"
 
     print(f"\n[INFO] Loading data from directory: {input_directory}")
@@ -184,8 +211,14 @@ def main():
         # Load and merge heterogeneous data sources
         merged_df, ingestion_metadata = load_and_merge_data(input_directory)
 
+        # Save merged DataFrame to a temporary CSV file for the agent pipeline
+        merged_input_path = os.path.join(input_directory, "merged_input.csv")
+        print(f"\n[INFO] Saving merged data to: {merged_input_path}")
+        merged_df.to_csv(merged_input_path, index=False, encoding="utf-8-sig")
+        print(f"[SUCCESS] Merged data saved: {merged_df.shape}")
+
         # Generate profile information for the merged dataframe
-        from src.utils.data_loader import extract_df_info
+        from src.nodes.executor import extract_df_info
         original_df_info = extract_df_info(merged_df)
 
         # Add ingestion metadata to df_info
@@ -219,7 +252,7 @@ def main():
     # 3. Initialize state
     print("\n[INFO] Initializing Agent state...")
     initial_state = StateFactory.create_initial_state(
-        input_file_path=input_directory,  # Now points to directory, not single file
+        input_file_path=merged_input_path,  # Use the merged CSV file, not the directory
         output_file_path=output_file
     )
     initial_state["original_df_info"] = original_df_info
@@ -246,8 +279,61 @@ def main():
     # 6. Print final report
     print_final_report(final_state)
 
-    # 7. End
+    # 7. Extract and return structured results for Streamlit API
+    print("\n[INFO] Preparing API response...")
+
+    # Extract values from final_state
+    original_info = final_state.get("original_df_info", {})
+    cleaned_info = final_state.get("cleaned_df_info", {})
+    qa_result = final_state.get("qa_result", {})
+
+    # Parse shape tuples to get row counts
+    orig_shape = original_info.get("shape", (0, 0))
+    cleaned_shape = cleaned_info.get("shape", (0, 0))
+    orig_rows = orig_shape[0] if isinstance(orig_shape, tuple) else 0
+    cleaned_rows = cleaned_shape[0] if isinstance(cleaned_shape, tuple) else 0
+
+    # Get null counts
+    orig_nulls = original_info.get("total_nulls", 0)
+    cleaned_nulls = cleaned_info.get("total_nulls", 0)
+
+    # QA status and report
+    qa_passed = qa_result.get("passed", False)
+    qa_status = "PASSED" if qa_passed else "FAILED"
+    qa_report = qa_result.get("llm_assessment", "No QA report available")
+
+    # EDA report
+    eda_report = final_state.get("eda_plan", "No EDA report available")
+
+    # Cleaned DataFrame - Read from the saved file on disk (full dataset, not truncated)
+    # The Executor node saves the complete cleaned data to output_file, so we read it back here
+    # This avoids keeping large DataFrames in memory across the entire graph execution
+    # IMPORTANT: Load this even if QA failed - user needs to debug failed cleaning attempts
+    cleaned_df = None
+    if final_state.get("execution_success", False):
+        try:
+            import pandas as pd
+            cleaned_df = pd.read_csv(output_file, encoding="utf-8-sig")
+            print(f"[SUCCESS] Loaded full cleaned dataset from disk: {cleaned_df.shape}")
+            print(f"[DEBUG] Missing values in loaded data: {cleaned_df.isna().sum().sum()}")
+        except Exception as e:
+            print(f"[WARNING] Failed to read cleaned data file: {str(e)}")
+            cleaned_df = None
+
+    # Build the API response dict
+    api_response = {
+        "orig_rows": orig_rows,
+        "cleaned_rows": cleaned_rows,
+        "orig_nulls": orig_nulls,
+        "cleaned_nulls": cleaned_nulls,
+        "qa_status": qa_status,
+        "qa_report": qa_report,
+        "eda_report": eda_report,
+        "cleaned_df": cleaned_df  # Full dataset loaded from disk
+    }
+
     print("\n[SUCCESS] Agent execution completed!")
+    return api_response
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 [project]
-name = "eda-agent"
+name = "dataman"
 version = "0.1.0"
-description = "Adaptive Data Cleaning & QA Agent using LangGraph"
+description = "Dataman - Intelligent Data Cleaning & QA Agent using LangGraph"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -15,6 +15,7 @@ dependencies = [
     "seaborn>=0.13.2",
     "openpyxl>=3.1.0",
     "pdfplumber>=0.11.0",
+    "streamlit>=1.60.0",
 ]
 
 [project.optional-dependencies]

@@ -106,6 +106,17 @@ def executor_node(state: DataCleaningState) -> Dict[str, Any]:
         print(f"   Original data: {df.shape}")
         print(f"   After cleaning: {cleaned_df.shape}")
 
+        # 🔍 DEBUG: Print per-column missing values for debugging
+        print("\n" + "="*60)
+        print("--- DEBUG: MISSING VALUES PER COLUMN AFTER CLEANING ---")
+        print("="*60)
+        missing_per_col = cleaned_df.isna().sum()
+        for col, count in missing_per_col.items():
+            if count > 0:
+                print(f"  {col}: {count} missing values")
+        print(f"  TOTAL MISSING: {missing_per_col.sum()}")
+        print("="*60 + "\n")
+
         # 4. Save cleaned data
         output_path = Path(output_file_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -176,7 +187,10 @@ def extract_df_info(df: pd.DataFrame) -> Dict[str, Any]:
     null_counts = df.isnull().sum().to_dict()
     total_nulls = sum(null_counts.values())
 
-    # Data types
+    # Missing values per column (explicit for QA node visibility)
+    missing_values = df.isna().sum().to_dict()
+
+    # Data types (explicit conversion to string for QA node)
     dtypes = df.dtypes.astype(str).to_dict()
 
     # Sample data (first 10 rows)
@@ -190,7 +204,8 @@ def extract_df_info(df: pd.DataFrame) -> Dict[str, Any]:
         "shape": df.shape,
         "columns": df.columns.tolist(),
         "dtypes": dtypes,
-        "null_counts": null_counts,
+        "missing_values": missing_values,  # Explicit field for QA verification
+        "null_counts": null_counts,  # Keep for backward compatibility
         "total_nulls": total_nulls,
         "sample_data": sample_data,
         "memory_usage": f"{memory_mb:.2f} MB",

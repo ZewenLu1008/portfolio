@@ -1,4 +1,4 @@
-# Adaptive Data Cleaning & QA Agent
+# Dataman
 
 An intelligent data cleaning and quality assurance agent built with LangGraph. Automatically diagnoses data quality issues, generates Pandas cleaning code, executes it locally, and implements self-correction mechanisms.
 
@@ -123,7 +123,7 @@ python scripts/run_agent.py
 ## Project Structure
 
 ```
-EDA_agent/
+Dataman/
 ├── src/
 │   ├── core/
 │   │   ├── state.py          # LangGraph State definitions
@@ -235,6 +235,116 @@ All tests use mocked LLM calls to ensure instant execution without consuming API
 
 See [tests/TESTING.md](tests/TESTING.md) for detailed testing documentation.
 
+## Web Application (Streamlit UI)
+
+The project includes a production-ready web interface built with Streamlit, providing an intuitive way to interact with the multi-agent data cleaning pipeline.
+
+![Web App UI](docs/img/dataman_1.png)
+
+### Key Features
+
+#### 1. Multi-Source Data Upload
+- Drag-and-drop interface supporting CSV, Excel (.xlsx), and PDF files
+- Automatic data ingestion from heterogeneous sources
+- Real-time file processing with metadata display (file counts by type, warnings)
+
+#### 2. Real-Time Execution Progress
+- Live status tracking of each pipeline stage:
+  - Profiler: Diagnosing data quality issues
+  - Coder: Generating Python cleaning script
+  - Executor: Running code in sandbox environment
+  - QA Node: Validating retention rate and data quality rules
+  - EDA Node: Generating visualizations and business insights
+- Visual feedback with expandable status containers
+
+#### 3. Interactive Results Dashboard
+
+The application presents results in three organized tabs:
+
+**Tab 1: LLM Assessment Report**
+- Displays the comprehensive QA evaluation from the LLM
+- Shows deterministic rule check results (retention rate, missing values, duplicates)
+- Presents the combined quality score and pass/fail status
+- Lists specific issues detected and improvement suggestions
+
+**Tab 2: EDA Analysis (Paginated Slide Layout)**
+- Interactive pagination with Previous/Next navigation
+- Page 0: High-level dataset summary with visualization count
+- Pages 1-N: Individual plot pages with side-by-side layout
+  - Left column: Full-resolution chart image
+  - Right column: Plot-specific interpretation and business insights
+- Dynamic plot filtering: Automatically skips missing plots without errors
+- Stable container architecture prevents tab jumping during navigation
+- Clean, professional UI with plain text (no emojis)
+
+![EDA Pagination UI](docs/img/dataman_2.png)
+
+**Tab 3: Cleaned Data View**
+- Interactive data preview (first 20 rows for performance)
+- Dataset shape information (rows × columns)
+- Per-column missing value breakdown with expandable section
+- Visual warning indicators for remaining data quality issues
+
+#### 4. Data Export
+- One-click download of the complete cleaned dataset as CSV
+- Downloads the full dataset (not truncated preview)
+- Works even when QA validation fails, enabling debugging
+- UTF-8 encoding with proper handling of special characters
+
+#### 5. Metrics Summary
+- At-a-glance metrics displayed as cards:
+  - Original row count vs. Cleaned row count
+  - Missing values before/after cleaning
+  - QA validation status (PASSED/FAILED)
+
+### Running the Web Application
+
+```bash
+# Ensure dependencies are installed
+uv sync
+
+# Launch the Streamlit app
+streamlit run app.py
+```
+
+The application will open in your browser at `http://localhost:8501`.
+
+### Technical Implementation
+
+**State Management**
+- Uses `st.session_state` to persist execution results across re-runs
+- Separate state tracking for EDA pagination (`eda_page`) to enable smooth navigation
+- Session state reset on new pipeline execution to prevent stale data
+
+**Backend Integration**
+- Calls `run_agent_pipeline()` from `scripts/run_agent.py` as API
+- Loads full cleaned dataset from disk (`outputs/cleaned_data.csv`) rather than passing through state
+- Memory-efficient architecture: DataFrame not kept in state during graph execution
+
+**UI Architecture**
+- Stable container pattern in Tab 2 prevents Streamlit tab jumping on layout changes
+- Dynamic plot filtering with `os.path.exists()` ensures robust rendering
+- Structured JSON format from EDA Node enables rich, interactive visualization presentation
+
+**Debug Features**
+- Terminal logging of per-column missing values after code execution
+- Console warnings for missing plot files
+- Failed data always accessible for debugging via download button
+
+### Troubleshooting
+
+**Issue: Charts not displaying in EDA tab**
+
+**Solution**: Ensure the EDA Node is saving plots to `outputs/charts/` (not `outputs/plots/`). Check console for warnings about missing plot files.
+
+**Issue: Tab jumps to first tab when clicking Next**
+
+**Solution**: This has been fixed by wrapping Tab 2 content in a stable `st.container()`. Update to the latest version of `app.py`.
+
+**Issue: Download button provides truncated data**
+
+**Solution**: The app now reads the full dataset from the saved CSV file on disk. Ensure `outputs/cleaned_data.csv` exists after pipeline execution.
+
 ## Development Roadmap
 
 - [x] Project structure setup
@@ -249,6 +359,9 @@ See [tests/TESTING.md](tests/TESTING.md) for detailed testing documentation.
 - [x] Self-correction mechanism
 - [x] English-only enforcement
 - [x] Unit tests (36 tests, 100% passing)
+- [x] Streamlit web application with interactive UI
+- [x] Paginated EDA visualization with side-by-side layout
+- [x] Multi-source data ingestion (CSV/Excel/PDF)
 - [ ] Logging and monitoring
 - [ ] Additional EDA node enhancements
 

@@ -1,155 +1,177 @@
 """
-Generate Heterogeneous Test Data
+Generate Heterogeneous E-commerce Test Data
 
-Creates sample CSV, Excel, and PDF files with tables for testing
-the multi-source data ingestion pipeline.
+Creates realistic CSV, Excel, and PDF files with overlapping schemas
+for testing the multi-source data ingestion pipeline.
+
+Domain: Global E-commerce Sales
+Common Schema: order_id, order_date, customer_name, category, price
 """
 import pandas as pd
 import numpy as np
 from pathlib import Path
+from datetime import datetime, timedelta
 from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
 from reportlab.lib import colors
 
 
-def generate_csv_data(output_dir: Path) -> None:
+def generate_csv_north_america(output_dir: Path) -> None:
     """
-    Generate a sample CSV file with customer data
+    Generate CSV file: North America Sales (~50 rows)
+
+    Data quality issues:
+    - A few duplicate order_ids
+    - 2-3 missing values in price column
     """
     np.random.seed(42)
 
+    # Generate 50 orders
+    categories = ["Electronics", "Clothing", "Home & Garden", "Sports", "Books"]
+    names = ["John Smith", "Emily Johnson", "Michael Brown", "Sarah Davis", "David Wilson",
+             "Jessica Garcia", "James Martinez", "Jennifer Rodriguez", "Robert Lee", "Linda Taylor"]
+
     data = {
-        "customer_id": range(1, 51),
-        "name": [f"Customer_{i}" for i in range(1, 51)],
-        "age": np.random.randint(18, 70, 50),
-        "purchase_amount": np.random.uniform(10, 500, 50).round(2),
-        "region": np.random.choice(["North", "South", "East", "West"], 50)
+        "order_id": [f"NA{1000 + i}" for i in range(50)],
+        "order_date": [(datetime(2024, 1, 1) + timedelta(days=i*2)).strftime("%Y-%m-%d") for i in range(50)],
+        "customer_name": np.random.choice(names, 50),
+        "category": np.random.choice(categories, 50),
+        "price": np.random.uniform(15.99, 599.99, 50).round(2)
     }
 
     df = pd.DataFrame(data)
 
-    # Introduce some missing values
-    df.loc[5:7, "age"] = np.nan
-    df.loc[15, "purchase_amount"] = np.nan
+    # Inject duplicate order_ids (3 duplicates)
+    df.loc[5, "order_id"] = df.loc[3, "order_id"]
+    df.loc[15, "order_id"] = df.loc[10, "order_id"]
+    df.loc[25, "order_id"] = df.loc[20, "order_id"]
 
-    output_path = output_dir / "customers.csv"
+    # Inject missing prices (3 NaN values)
+    df.loc[8, "price"] = np.nan
+    df.loc[18, "price"] = np.nan
+    df.loc[35, "price"] = np.nan
+
+    output_path = output_dir / "sales_north_america.csv"
     df.to_csv(output_path, index=False)
     print(f"[Generated] CSV file: {output_path}")
     print(f"  Shape: {df.shape}")
+    print(f"  Issues: 3 duplicate order_ids, 3 missing prices")
 
 
-def generate_excel_data(output_dir: Path) -> None:
+def generate_excel_europe(output_dir: Path) -> None:
     """
-    Generate a sample Excel file with multiple sheets (products and sales)
+    Generate Excel file: Europe Sales (~50 rows)
+
+    Data quality issues:
+    - Different date format (DD/MM/YYYY instead of YYYY-MM-DD)
+    - Price with "$" currency symbol prefix (strings instead of numbers)
     """
     np.random.seed(43)
 
-    # Sheet 1: Products
-    products_data = {
-        "product_id": range(101, 121),
-        "product_name": [f"Product_{i}" for i in range(101, 121)],
-        "category": np.random.choice(["Electronics", "Clothing", "Food", "Books"], 20),
-        "price": np.random.uniform(5, 200, 20).round(2),
-        "stock": np.random.randint(0, 100, 20)
-    }
-    products_df = pd.DataFrame(products_data)
+    # Generate 50 orders
+    categories = ["Electronics", "Clothing", "Home & Garden", "Sports", "Books"]
+    names = ["Oliver Smith", "Emma Johnson", "Liam Brown", "Sophia Davis", "Noah Wilson",
+             "Ava Garcia", "Elijah Martinez", "Isabella Rodriguez", "William Lee", "Mia Taylor"]
 
-    # Introduce some duplicates
-    products_df = pd.concat([products_df, products_df.iloc[[0, 5, 10]]], ignore_index=True)
-
-    # Sheet 2: Sales
-    sales_data = {
-        "sale_id": range(1, 31),
-        "product_id": np.random.choice(range(101, 121), 30),
-        "quantity": np.random.randint(1, 10, 30),
-        "sale_date": pd.date_range("2024-01-01", periods=30, freq="D"),
-        "discount": np.random.uniform(0, 0.3, 30).round(2)
-    }
-    sales_df = pd.DataFrame(sales_data)
-
-    # Introduce missing values
-    sales_df.loc[10:12, "discount"] = np.nan
-
-    output_path = output_dir / "products_sales.xlsx"
-    with pd.ExcelWriter(output_path, engine='openpyxl') as writer:
-        products_df.to_excel(writer, sheet_name='Products', index=False)
-        sales_df.to_excel(writer, sheet_name='Sales', index=False)
-
-    print(f"[Generated] Excel file: {output_path}")
-    print(f"  - Sheet 'Products': {products_df.shape}")
-    print(f"  - Sheet 'Sales': {sales_df.shape}")
-
-
-def generate_pdf_with_table(output_dir: Path) -> None:
-    """
-    Generate a sample PDF file containing a table with employee data
-    """
-    np.random.seed(44)
-
-    # Create employee data
     data = {
-        "emp_id": range(1001, 1021),
-        "employee_name": [f"Employee_{i}" for i in range(1001, 1021)],
-        "department": np.random.choice(["HR", "IT", "Sales", "Finance"], 20),
-        "salary": np.random.randint(30000, 100000, 20),
-        "hire_year": np.random.randint(2015, 2024, 20)
+        "order_id": [f"EU{2000 + i}" for i in range(50)],
+        "order_date": [(datetime(2024, 1, 1) + timedelta(days=i*2)).strftime("%d/%m/%Y") for i in range(50)],  # DD/MM/YYYY format
+        "customer_name": np.random.choice(names, 50),
+        "category": np.random.choice(categories, 50),
+        "price": [f"${price:.2f}" for price in np.random.uniform(15.99, 599.99, 50)]  # String with $ prefix
     }
 
     df = pd.DataFrame(data)
 
-    output_path = output_dir / "employees.pdf"
+    output_path = output_dir / "sales_europe.xlsx"
+    df.to_excel(output_path, index=False, engine='openpyxl')
 
-    # Create PDF
+    print(f"[Generated] Excel file: {output_path}")
+    print(f"  Shape: {df.shape}")
+    print(f"  Issues: DD/MM/YYYY date format, prices with '$' prefix")
+
+
+def generate_pdf_asia(output_dir: Path) -> None:
+    """
+    Generate PDF file: Asia Sales (~30 rows)
+
+    Data quality issues:
+    - Irregular casing in category column
+    - Trailing/leading spaces in category column
+    """
+    np.random.seed(44)
+
+    # Generate 30 orders
+    categories = ["Electronics", "Clothing", "Home & Garden", "Sports", "Books"]
+    names = ["Wei Chen", "Yuki Tanaka", "Raj Patel", "Min-jun Kim", "Priya Sharma",
+             "Haruto Suzuki", "Aisha Khan", "Kenji Sato", "Anika Gupta", "Taro Yamamoto"]
+
+    data = {
+        "order_id": [f"AS{3000 + i}" for i in range(30)],
+        "order_date": [(datetime(2024, 1, 1) + timedelta(days=i*3)).strftime("%Y-%m-%d") for i in range(30)],
+        "customer_name": np.random.choice(names, 30),
+        "category": np.random.choice(categories, 30),
+        "price": np.random.uniform(15.99, 599.99, 30).round(2)
+    }
+
+    df = pd.DataFrame(data)
+
+    # Inject irregular casing and spacing issues in category
+    df.loc[2, "category"] = "  Electronics "  # Leading and trailing spaces
+    df.loc[5, "category"] = "CLOTHING"  # All uppercase
+    df.loc[8, "category"] = "home & garden"  # All lowercase
+    df.loc[12, "category"] = "  SPORTS  "  # Uppercase with spaces
+    df.loc[15, "category"] = "books "  # Lowercase with trailing space
+    df.loc[18, "category"] = " Electronics"  # Leading space
+    df.loc[22, "category"] = "BOOKS"  # Uppercase
+    df.loc[25, "category"] = "clothing  "  # Lowercase with trailing spaces
+    df.loc[28, "category"] = "  Home & Garden"  # Leading spaces with mixed case
+
+    output_path = output_dir / "sales_asia.pdf"
+
+    # Create PDF with table
     doc = SimpleDocTemplate(str(output_path), pagesize=letter)
     story = []
-    styles = getSampleStyleSheet()
 
-    # Add title
-    title = Paragraph("<b>Employee Information Report</b>", styles['Title'])
-    story.append(title)
-    story.append(Spacer(1, 12))
-
-    # Add description
-    description = Paragraph(
-        "This PDF contains a table with employee information including ID, name, department, salary, and hire year.",
-        styles['Normal']
-    )
-    story.append(description)
-    story.append(Spacer(1, 20))
-
-    # Convert DataFrame to table data
+    # Convert DataFrame to table data (header + rows)
     table_data = [df.columns.tolist()] + df.values.tolist()
 
-    # Create table
-    table = Table(table_data)
+    # Create table with styling
+    table = Table(table_data, repeatRows=1)
     table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        # Header styling
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#4472C4')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('FONTSIZE', (0, 0), (-1, 0), 10),
         ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        # Body styling
+        ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#F2F2F2')),
+        ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 1), (-1, -1), 8),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
     ]))
 
     story.append(table)
-
-    # Build PDF
     doc.build(story)
 
     print(f"[Generated] PDF file: {output_path}")
-    print(f"  Table shape: {df.shape}")
+    print(f"  Shape: {df.shape}")
+    print(f"  Issues: Irregular casing and spacing in category column")
 
 
 def main():
     """
-    Generate all heterogeneous test data files
+    Generate all heterogeneous e-commerce test data files
     """
     print("\n" + "="*60)
-    print("Generating Heterogeneous Test Data")
+    print("Generating Heterogeneous E-commerce Test Data")
     print("="*60 + "\n")
+    print("Domain: Global E-commerce Sales")
+    print("Schema: order_id, order_date, customer_name, category, price")
+    print()
 
     # Create output directory
     output_dir = Path("data/raw")
@@ -158,23 +180,28 @@ def main():
 
     # Generate files
     try:
-        generate_csv_data(output_dir)
+        generate_csv_north_america(output_dir)
         print()
 
-        generate_excel_data(output_dir)
+        generate_excel_europe(output_dir)
         print()
 
-        generate_pdf_with_table(output_dir)
+        generate_pdf_asia(output_dir)
         print()
 
         print("="*60)
         print("[SUCCESS] All test files generated successfully!")
         print("="*60)
         print(f"\nGenerated files in {output_dir}:")
-        print("  - customers.csv (50 rows)")
-        print("  - products_sales.xlsx (2 sheets)")
-        print("  - employees.pdf (1 table with 20 rows)")
-        print(f"\nTotal expected rows after merge: ~113 rows")
+        print("  - sales_north_america.csv (50 rows)")
+        print("  - sales_europe.xlsx (50 rows)")
+        print("  - sales_asia.pdf (30 rows)")
+        print(f"\nTotal expected rows after merge: 130 rows")
+        print("\nData Quality Issues (All Recoverable):")
+        print("  CSV: 3 duplicate order_ids, 3 missing prices")
+        print("  Excel: DD/MM/YYYY date format, prices with '$' prefix")
+        print("  PDF: Irregular casing and spacing in category")
+        print("\nExpected retention rate: >90% after cleaning")
 
     except Exception as e:
         print(f"\n[ERROR] Failed to generate test data: {str(e)}")
