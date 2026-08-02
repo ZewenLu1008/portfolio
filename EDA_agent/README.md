@@ -239,7 +239,7 @@ See [tests/TESTING.md](tests/TESTING.md) for detailed testing documentation.
 
 The project includes a production-ready web interface built with Streamlit, providing an intuitive way to interact with the multi-agent data cleaning pipeline.
 
-![Web App UI](data/img/dataman_1.png)
+![Web App UI](data/img/dataman_5.png)
 
 ### Key Features
 
@@ -277,7 +277,7 @@ The application presents results in three organized tabs:
 - Stable container architecture prevents tab jumping during navigation
 - Clean, professional UI with plain text (no emojis)
 
-![EDA Pagination UI](data/img/dataman_2.png)
+![EDA Pagination UI](data/img/dataman_4.png)
 
 **Tab 3: Cleaned Data View**
 - Interactive data preview (first 20 rows for performance)
