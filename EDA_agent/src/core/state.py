@@ -13,8 +13,8 @@ class DataCleaningState(TypedDict):
 
     State flow path:
     Profiler -> Coder -> Executor -> QA -> END
-                  ^         |
-                  |_________|  (Self-Correction Loop)
+                  ^                  |
+                  |__________________|  (Self-Correction Loop)
     """
 
     # ========== Original Data Information ==========

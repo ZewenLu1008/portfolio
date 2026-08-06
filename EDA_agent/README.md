@@ -267,15 +267,13 @@ The application presents results in three organized tabs:
 - Presents the combined quality score and pass/fail status
 - Lists specific issues detected and improvement suggestions
 
-**Tab 2: EDA Analysis (Paginated Slide Layout)**
+**Tab 2: EDA Analysis**
+
 - Interactive pagination with Previous/Next navigation
 - Page 0: High-level dataset summary with visualization count
 - Pages 1-N: Individual plot pages with side-by-side layout
   - Left column: Full-resolution chart image
   - Right column: Plot-specific interpretation and business insights
-- Dynamic plot filtering: Automatically skips missing plots without errors
-- Stable container architecture prevents tab jumping during navigation
-- Clean, professional UI with plain text (no emojis)
 
 ![EDA Pagination UI](data/img/dataman_4.png)
 
@@ -287,12 +285,10 @@ The application presents results in three organized tabs:
 
 #### 4. Data Export
 - One-click download of the complete cleaned dataset as CSV
-- Downloads the full dataset (not truncated preview)
 - Works even when QA validation fails, enabling debugging
-- UTF-8 encoding with proper handling of special characters
 
 #### 5. Metrics Summary
-- At-a-glance metrics displayed as cards:
+- Plain metrics displayed:
   - Original row count vs. Cleaned row count
   - Missing values before/after cleaning
   - QA validation status (PASSED/FAILED)
@@ -333,17 +329,13 @@ The application will open in your browser at `http://localhost:8501`.
 
 ### Troubleshooting
 
-**Issue: Charts not displaying in EDA tab**
+**Issue: Download button provides truncated data**
 
-**Solution**: Ensure the EDA Node is saving plots to `outputs/charts/` (not `outputs/plots/`). Check console for warnings about missing plot files.
+**Solution**: The app now reads the full dataset from the saved CSV file on disk. Ensure `outputs/cleaned_data.csv` exists after pipeline execution.
 
 **Issue: Tab jumps to first tab when clicking Next**
 
 **Solution**: This has been fixed by wrapping Tab 2 content in a stable `st.container()`. Update to the latest version of `app.py`.
-
-**Issue: Download button provides truncated data**
-
-**Solution**: The app now reads the full dataset from the saved CSV file on disk. Ensure `outputs/cleaned_data.csv` exists after pipeline execution.
 
 ## Development Roadmap
 
@@ -385,20 +377,6 @@ if retry_count < 3:  # Change 3 to your desired limit
     return "coder"
 ```
 
-## Troubleshooting
-
-### Issue: LLM outputs Chinese text
-
-**Solution**: The system prompts now enforce English-only output. Ensure you're using the latest version of the prompt templates in `src/nodes/`.
-
-### Issue: Pandas deprecation warnings
-
-**Solution**: The Coder Node now instructs the LLM to avoid deprecated parameters like `infer_datetime_format`.
-
-### Issue: Chinese column names cause errors
-
-**Solution**: The Profiler now instructs the Coder to translate Chinese column names to English as the first cleaning step.
-
 ## License
 
 MIT License
@@ -407,5 +385,4 @@ MIT License
 
 Issues and Pull Requests are welcome! Please ensure:
 - All code comments are in English
-- No Chinese characters in code or documentation
 - Follow the existing code style and architecture

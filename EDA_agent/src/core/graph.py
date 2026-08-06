@@ -80,8 +80,8 @@ def build_graph() -> StateGraph:
 
     Flow:
         START → Profiler → Coder → Executor → [conditional routing]
-                                       ↑         ↓
-                                       └─────────┤
+                             ↑                   ↓
+                             └───────────────────┤
                                     (Self-Correction)
                                                  ↓
                                                 QA → [conditional routing]
