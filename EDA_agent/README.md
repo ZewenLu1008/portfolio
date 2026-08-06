@@ -1,10 +1,12 @@
 # Dataman
 
-An intelligent data cleaning and quality assurance agent built with LangGraph. Automatically diagnoses data quality issues, generates Pandas cleaning code, executes it locally, and implements self-correction mechanisms.
+An intelligent data cleaning and quality assurance agent built with LangGraph. Features **multi-source heterogeneous data fusion** (CSV, Excel, and PDF including scanned documents) with automatic quality diagnosis, self-correcting code generation, and comprehensive EDA analysis.
 
 ## Features
 
 - **Multi-Source Data Ingestion**: Automatically processes CSV, Excel, and PDF files from a single directory
+  - **Native PDF Support**: Extracts tables from machine-readable PDFs via pdfplumber
+  - **Scanned PDF Support**: OCR fallback for image-based PDFs using img2table + Tesseract
 - **Automatic Data Quality Diagnosis**: Intelligently analyzes data quality issues with awareness of multi-source artifacts
 - **Code Auto-Generation**: Generates Pandas cleaning code based on diagnostic results
 - **Self-Correction Mechanism**: Automatically retries on execution failure (up to 3 attempts)
@@ -83,7 +85,51 @@ uv sync
 
 # Or using pip
 pip install -e .
+
+# For Scanned PDF Support (optional but recommended)
+pip install pdf2image img2table pytesseract
 ```
+
+#### System Dependencies for Scanned PDF Support
+
+**Windows:**
+```bash
+# Install Poppler (for pdf2image)
+choco install poppler
+
+# Install Tesseract OCR (for img2table)
+choco install tesseract
+
+# Or download manually:
+# Poppler: https://github.com/oschwartz10612/poppler-windows/releases
+# Tesseract: https://github.com/UB-Mannheim/tesseract/wiki
+# Add installation directories to system PATH
+```
+
+**macOS:**
+```bash
+brew install poppler tesseract
+```
+
+**Linux (Ubuntu/Debian):**
+```bash
+sudo apt-get update
+sudo apt-get install -y poppler-utils tesseract-ocr
+```
+
+**Verify Installation:**
+```python
+# Run this to check if OCR dependencies are properly installed
+python -c "
+from pdf2image import convert_from_path
+from img2table.ocr import TesseractOCR
+import pytesseract
+print('✓ All OCR dependencies installed!')
+print(f'Tesseract version: {pytesseract.get_tesseract_version()}')
+"
+```
+
+> **Note**: If you skip OCR dependencies, the system will still work for native PDFs but will log warnings for scanned PDFs.
 
 ### 2. Generate Test Data
 
@@ -327,7 +373,30 @@ The application will open in your browser at `http://localhost:8501`.
 - Console warnings for missing plot files
 - Failed data always accessible for debugging via download button
 
-### Troubleshooting
+## Troubleshooting
+
+**Issue: Scanned PDFs return empty tables**
+
+**Solution**: Install OCR dependencies (see Quick Start section). The system uses a two-phase strategy:
+1. **Phase 1**: pdfplumber for native PDFs (fast, no OCR overhead)
+2. **Phase 2**: img2table + Tesseract OCR fallback for scanned pages
+
+**Issue: Poor OCR accuracy on scanned PDFs**
+
+**Solution**: Adjust DPI and confidence settings in `src/utils/data_ingestion.py`:
+```python
+# In load_pdf() function
+images = convert_from_path(
+    str(file_path),
+    dpi=400  # Increase from 300 for better accuracy
+)
+
+# In extract_table_from_image() function
+extracted_tables = img.extract_tables(
+    ocr=ocr,
+    min_confidence=40  # Lower from 50 to catch more tables
+)
+```
 
 **Issue: Download button provides truncated data**
 

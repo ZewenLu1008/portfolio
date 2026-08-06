@@ -4,13 +4,28 @@ Data Ingestion Module - Multi-Source Heterogeneous Data Loader
 Responsibilities:
     Load and merge data from multiple file formats (CSV, Excel, PDF)
     Handle schema misalignments and data extraction from diverse sources
+    Support both native and scanned PDFs via OCR fallback
 """
 import os
 import warnings
+import logging
 from pathlib import Path
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Tuple, Optional
 import pandas as pd
 import pdfplumber
+
+# OCR dependencies (imported conditionally to allow graceful degradation)
+try:
+    from pdf2image import convert_from_path
+    from img2table.document import Image
+    from img2table.ocr import TesseractOCR
+    OCR_AVAILABLE = True
+except ImportError:
+    OCR_AVAILABLE = False
+    logging.warning(
+        "OCR dependencies not available. Scanned PDF support disabled. "
+        "Install with: pip install pdf2image img2table pytesseract"
+    )
 
 
 def load_and_merge_data(directory_path: str) -> Tuple[pd.DataFrame, Dict[str, Any]]:
@@ -180,9 +195,70 @@ def load_excel(file_path: Path) -> List[Tuple[str, pd.DataFrame]]:
     return results
 
 
+def extract_table_from_image(image_path: Path, page_num: int) -> Optional[pd.DataFrame]:
+    """
+    Extract table from scanned PDF page using OCR
+
+    Uses img2table library which combines OCR with table structure detection.
+    Supports both Tesseract and other OCR backends.
+
+    Args:
+        image_path: Path to the page image
+        page_num: Page number (for logging)
+
+    Returns:
+        DataFrame if table extraction succeeds, None otherwise
+    """
+    if not OCR_AVAILABLE:
+        logging.warning(f"    - Page {page_num}: OCR dependencies not available, skipping")
+        return None
+
+    try:
+        # Initialize Tesseract OCR engine
+        # img2table supports multiple OCR backends: Tesseract, EasyOCR, PaddleOCR
+        ocr = TesseractOCR(n_threads=1, lang="eng")
+
+        # Load image and extract tables
+        img = Image(str(image_path), detect_rotation=False)
+        extracted_tables = img.extract_tables(
+            ocr=ocr,
+            implicit_rows=True,  # Detect rows without explicit borders
+            borderless_tables=True,  # Detect tables without borders
+            min_confidence=50  # Minimum OCR confidence threshold (0-100)
+        )
+
+        if not extracted_tables:
+            logging.info(f"    - Page {page_num}: No tables detected via OCR")
+            return None
+
+        # img2table returns a list of ExtractedTable objects
+        # Each has a .df attribute containing the pandas DataFrame
+        for table_idx, table_obj in enumerate(extracted_tables):
+            df = table_obj.df
+
+            if df is not None and not df.empty:
+                # Clean up: remove completely empty rows/columns
+                df = df.dropna(how='all', axis=0)
+                df = df.dropna(how='all', axis=1)
+
+                if not df.empty:
+                    print(f"    - Page {page_num}, Table {table_idx + 1} (OCR): {df.shape}")
+                    return df
+
+        return None
+
+    except Exception as e:
+        logging.warning(f"    - Page {page_num}: OCR extraction failed: {str(e)}")
+        return None
+
+
 def load_pdf(file_path: Path) -> List[Tuple[int, pd.DataFrame]]:
     """
-    Extract tables from PDF file using pdfplumber
+    Extract tables from PDF file with fallback strategy for scanned PDFs
+
+    Strategy:
+    1. Primary: Use pdfplumber to extract tables from native (machine-readable) PDFs
+    2. Fallback: If no tables found, assume scanned PDF and use OCR (img2table + Tesseract)
 
     Args:
         file_path: Path to PDF file
@@ -191,12 +267,15 @@ def load_pdf(file_path: Path) -> List[Tuple[int, pd.DataFrame]]:
         List of (page_number, dataframe) tuples
     """
     results = []
+
     try:
         with pdfplumber.open(file_path) as pdf:
             print(f"  [PDF] Processing {file_path.name} ({len(pdf.pages)} pages)")
 
             for page_num, page in enumerate(pdf.pages, start=1):
-                # Extract tables from page
+                page_has_data = False
+
+                # PHASE 1: Try pdfplumber extraction (native PDF)
                 tables = page.extract_tables()
 
                 if tables:
@@ -214,10 +293,51 @@ def load_pdf(file_path: Path) -> List[Tuple[int, pd.DataFrame]]:
                                 if not df.empty:
                                     print(f"    - Page {page_num}, Table {table_idx + 1}: {df.shape}")
                                     results.append((page_num, df))
+                                    page_has_data = True
                         except Exception as e:
-                            print(f"    - Failed to parse table on page {page_num}: {str(e)}")
+                            logging.warning(f"    - Failed to parse table on page {page_num}: {str(e)}")
+
+                # PHASE 2: OCR fallback for scanned pages (if pdfplumber found nothing)
+                if not page_has_data and OCR_AVAILABLE:
+                    try:
+                        print(f"    - Page {page_num}: No native tables found, attempting OCR...")
+
+                        # Convert PDF page to image using pdf2image
+                        # first_page and last_page are 1-indexed
+                        images = convert_from_path(
+                            str(file_path),
+                            first_page=page_num,
+                            last_page=page_num,
+                            dpi=300,  # Higher DPI = better OCR accuracy
+                            fmt='png'
+                        )
+
+                        if images:
+                            # Save temporary image for img2table processing
+                            temp_image_path = Path(file_path.parent) / f"_temp_page_{page_num}.png"
+                            images[0].save(temp_image_path, 'PNG')
+
+                            try:
+                                # Extract table from image
+                                df = extract_table_from_image(temp_image_path, page_num)
+
+                                if df is not None:
+                                    results.append((page_num, df))
+                                    page_has_data = True
+                            finally:
+                                # Clean up temporary image
+                                if temp_image_path.exists():
+                                    temp_image_path.unlink()
+
+                    except Exception as e:
+                        logging.warning(f"    - Page {page_num}: OCR fallback failed: {str(e)}")
+                        # Don't crash the entire ingestion - just skip this page
+
+                if not page_has_data:
+                    logging.info(f"    - Page {page_num}: No tables extracted (tried both methods)")
 
     except Exception as e:
+        logging.error(f"  [PDF] Failed to process {file_path.name}: {str(e)}")
         print(f"  [PDF] Failed to process {file_path.name}: {str(e)}")
 
     return results
