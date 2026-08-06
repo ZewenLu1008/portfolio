@@ -12,40 +12,45 @@ My core interests lie in Data Science, Artificial Intelligence, and Large Langua
 
 ### Self-Driven Innovation
 
-#### **Adaptive Data Cleaning & QA Agent**
+#### **Dataman: Enterprise-Grade Multi-Agent Data Cleaning & EDA Pipeline**
 **Repository**: [`EDA_agent/`](./EDA_agent)
 
-A self-initiated project born from firsthand experience with the tedious and error-prone nature of exploratory data analysis and data cleaning. Leveraging my domain knowledge in data science and software engineering, I designed and built a multi-agent system using LangGraph that fully automates the data cleaning pipeline.
+An autonomous, production-ready data preparation system built with LangGraph that transforms raw, heterogeneous data sources into analysis-ready datasets. Unlike simple LLM wrappers, Dataman implements a sophisticated multi-agent architecture with self-healing capabilities, deterministic quality gates, and defensive execution strategies designed for enterprise reliability.
+
+**Architecture**:
+```
+Raw Data → Profiler → Coder ⇄ Executor → QA → EDA → Clean Data + Insights
+                        ↑_________|
+                     (Self-Correction Loop)
+```
 
 **Key Highlights**:
-- **Autonomous Multi-Agent Architecture**: Implements a state-driven workflow with specialized nodes (Profiler, Coder, Executor, QA, EDA) that communicate and coordinate through LangGraph.
-- **Self-Correction Mechanism**: Automatically retries failed data cleaning operations up to 3 times, using execution errors as feedback to regenerate improved Pandas code.
-- **Intelligent Code Generation**: Uses LLMs (DeepSeek, OpenAI GPT-4, Anthropic Claude) to generate data cleaning code dynamically based on profiling insights.
-- **Quality Assurance**: Implements deterministic rule checks combined with LLM-based assessment to validate data cleaning effectiveness.
-- **End-to-End Automation**: From raw CSV input to cleaned data, visualizations, and comprehensive markdown reports—fully automated.
+- **Multi-Source Data Fusion**: Ingests CSV, Excel, and PDFs with intelligent fallback—`pdfplumber` for native tables, automatic OCR degradation (`img2table` + Tesseract) for scanned documents. Handles schema misalignments via outer-join concatenation with defensive NaN filling.
+- **Multi-agent Autonomous Workflow**: Profiler compresses raw data to metadata (avoids token limits), Coder generates defensive Pandas code (zero temperature), Executor runs in restricted namespace, QA implements hybrid validation (60% deterministic rules + 40% LLM-as-Judge), EDA enforces server-safe plotting.
+- **Self-Healing Execution Loop**: Failed code execution automatically routes back to Coder with exact tracebacks. Implements retry logic with exponential backoff (max 3 attempts) to regenerate corrected code.
+- **Production-Ready Engineering**: Custom state serialization for HITL readiness (NumPy/Pandas → native Python for `msgpack`), prompt injection defense via System/Human prompt separation, quality circuit breakers preventing >50% data loss.
+- **Comprehensive Testing**: 36 unit tests (100% passing) with mocked LLM calls, Streamlit web UI with real-time progress tracking, tested at scale (100K+ rows).
 
-**Tech Stack**: Python, LangGraph, LangChain, Pandas, Matplotlib, Seaborn, OpenAI API, Anthropic API, DeepSeek API
+**Tech Stack**: Python, LangGraph, LangChain, OpenAI/Anthropic/DeepSeek APIs, Pandas, pdfplumber, pdf2image, img2table, Tesseract OCR, Matplotlib, Seaborn, pytest
 
-**Impact**: Transforms hours of manual data wrangling into a single automated pipeline, demonstrating practical application of agentic AI workflows.
+**Impact**: Reduces 4+ hours of manual data wrangling to <5 minutes of autonomous processing. Demonstrates enterprise-grade agentic AI workflows with safeguards against silent data corruption—bridging research prototypes and production systems.
 
 ---
 
-### Academic Rigor & Competitive Data Science
-
-#### **Nutrition Prediction using Convolutional Networks**
+#### **Nutrition Prediction**
 **Repository**: [`nutrition_prediction/`](./nutrition_prediction)
 
-A computer vision project developed as part of rigorous academic coursework, focused on estimating caloric content from RGB and depth images. The project emphasizes architectural reasoning and feature fusion rather than transfer learning, with all networks initialized from scratch.
+A computer vision project focused on estimating caloric content from RGB and depth images. The project emphasizes architectural reasoning and feature fusion rather than transfer learning, with all networks initialized from scratch.
 
 **Key Highlights**:
 - **Dual-Branch Architecture**: Separates geometric (depth) and appearance (RGB) information through specialized convolutional branches, then fuses features via an adaptive weighting mechanism.
-- **From-Scratch Design**: All networks randomly initialized to demonstrate deep understanding of CNN architecture and feature learning.
+- **From-Scratch Design**: All networks randomly initialized to demonstrate deep understanding of CNN architecture and feature learning. No transfer learning is involved in this project.
 - **Comprehensive Evaluation**: Includes training curves, validation scatter plots, error analysis, and feature importance visualization.
 - **End-to-End Implementation**: Complete training pipeline with preprocessing, augmentation, model training, and Kaggle submission generation.
 
 **Tech Stack**: Python, PyTorch, Torchvision, Pandas, NumPy, Matplotlib, Scikit-learn, Pillow
 
-**Outcome**: Successfully predicted caloric content from visual inputs, with detailed analysis of model behavior and error patterns documented in a comprehensive research report.
+**Outcome**: Successfully predicted caloric content ($$R^2 \approx 0.81$$) from visual inputs, with detailed analysis of model behavior and error patterns documented in a comprehensive research report.
 
 ---
 
@@ -58,7 +63,6 @@ An academic project addressing the challenge of distinguishing machine-generated
 - **Domain Adaptation Strategy**: Uses a two-stage pipeline where a logistic regression model first predicts the domain, then routes samples to domain-specific classifiers.
 - **Sparse Text Classification**: Leverages TF-IDF feature extraction to handle high-dimensional text data efficiently.
 - **Class Imbalance Handling**: Addresses underrepresented classes through domain-aware routing and targeted classification.
-- **Competition Success**: Achieved 96% accuracy on Kaggle competition test set.
 
 **Tech Stack**: Python, Pandas, Scikit-learn, SciPy, TF-IDF, Logistic Regression
 
@@ -69,7 +73,7 @@ An academic project addressing the challenge of distinguishing machine-generated
 #### **Road Accident Analysis and Injury Prediction**
 **Repository**: [`road_accident_analysis/`](./road_accident_analysis)
 
-An academic data science project analyzing real-world Victorian crash records to understand how seatbelt usage, seating position, and vehicle type influence injury severity. The project combines statistical analysis with supervised machine learning to inform road safety strategies.
+A typical data science project analyzing real-world Victorian official records to investigate and demonstrate how seatbelt usage, seating position, and vehicle type influence injury severity. The project combines statistical analysis with supervised machine learning to inform road safety strategies.
 
 **Key Highlights**:
 - **Structured Data Pipeline**: End-to-end preprocessing including filtering, encoding, aggregation, and feature engineering.
@@ -93,11 +97,9 @@ An academic data science project analyzing real-world Victorian crash records to
 
 **Natural Language Processing**: TF-IDF, Text Classification, LLM Integration, Prompt Engineering
 
-**LLM & Agent Frameworks**: OpenAI API, Anthropic Claude API, DeepSeek API, Multi-Agent Systems, Agentic Workflows
+**LLM & Agent Frameworks**: OpenAI/Anthropic/DeepSeek API, Multi-Agent Systems, Agentic Workflows
 
 **Data Science Tools**: Pandas, Matplotlib, Seaborn, Jupyter Notebook, Data Cleaning, Exploratory Data Analysis
-
-**Development Tools**: Git, GitHub, uv, pip, Virtual Environments
 
 **Deployment & Engineering**: End-to-End Pipeline Design, Code Generation, Automated Testing, Error Handling
 
@@ -105,6 +107,6 @@ An academic data science project analyzing real-world Victorian crash records to
 
 ## Contact
 
-**GitHub**: [github.com/ZewenLu1008](https://github.com/ZewenLu1008)
+**LinkedIn**: [(19) Sebastian Lu | LinkedIn](https://www.linkedin.com/in/zewenlu-datascience/)
 
 Feel free to explore my projects and reach out for collaboration opportunities in Data Science, AI Engineering, or LLM Agent development.
